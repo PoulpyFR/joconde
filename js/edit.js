@@ -5,7 +5,7 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 	$scope.current_joconde_id = $scope.joconde_id;
 	$scope.wikidata_id = '';
 	$scope.data = [];
-	$scope.language = 'en';
+	$scope.language = 'fr';
 	$scope.datePrecision = [
 		{ value:11, text:'jour' },
 		{ value:10, text:'mois' },
@@ -47,20 +47,40 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 		$scope.loading = true;
 
 		 return api.search(val, $scope.language).then(function(res){
-			var labels = [];
-			angular.forEach(res.data.search, function(item){
-				if (item.description === undefined)
-					item.description = '(no description)';
-				labels.push({
-					label:       item.label,
-					id:          item.id,
-					description: item.description,
-					display:     item.label + "<br>" + item.description,
-					index:       i
+		 	
+		 	var ids = [];
+		 	angular.forEach(res.data.search, function(item){
+		 		ids.push(item.id);
+		 	});
+		 	
+			return api.descriptions(ids.join('|'), $scope.language).then(function(res2) {
+		 		var labels = [];
+		 		angular.forEach(res2.data.entities, function(item){
+		 			
+		 			var label, description;
+
+		 			if (item.labels[$scope.language] === undefined)
+		 				label = '(aucun label)';
+		 			else
+		 				label = item.labels[$scope.language].value;
+
+		 			if (item.descriptions[$scope.language] === undefined)
+		 				description = '(aucune description)';
+		 			else
+		 				description = item.descriptions[$scope.language].value;
+
+					labels.push({
+						label:       label,
+						id:          item.id,
+						description: description,
+						display:     label + "<br>" + description,
+						index:       i
 					});
-			});
-			$scope.loading = false;
-			return labels;
+		 		});
+		 		$scope.loading = false;
+				return labels;
+		 	});
+
 		});
 	}
 	
@@ -124,7 +144,6 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 		angular.forEach($scope.data, function(property) {
 			
 			angular.forEach(property.data, function(data) {
-			console.log(data.database);
 				if (typeof data.value !== 'undefined' && data.value != '' && !(property.header && typeof data.language === 'undefined') && !(typeof data.database !=='undefined' && data.database == 1)) {
 					if ($scope.wikidata_id)
 						$scope.quickStatements += $scope.wikidata_id;

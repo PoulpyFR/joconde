@@ -61,7 +61,19 @@ app.value('STRUCTURE', [
 		multiple:	true,
 		visible:	true,
 	},{
-		title:		'Sujet représenté',
+		title:		'Lieu',
+		type:			'entity',
+		property:	'P276',
+		multiple:	true,
+		visible:	true,
+	},{
+		title:		'Sujet de l\'œuvre',
+		type:			'entity',
+		property:	'P921',
+		multiple:	true,
+		visible:	true,
+	},{
+		title:		'Dépeint',
 		type:			'entity',
 		property:	'P180',
 		multiple:	true,
@@ -103,6 +115,10 @@ app.value('STRUCTURE', [
 		visible:	true,
 		subs: [
 			{
+				title:		'Décrit à l\'url',
+				type:			'text',
+				property:	'P973'
+			},{
 				title:		'Atlas ID',
 				type:			'text',
 				property:	'P1212'

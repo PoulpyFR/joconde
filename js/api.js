@@ -25,6 +25,20 @@ app.factory('api', function ($http) {
         'type' : 'item',
         'callback' : 'JSON_CALLBACK'
       };
+      
+      return $http.jsonp(WIKIDATA_API, { params : params });
+    },
+    
+    descriptions : function(ids, lang) {
+      var params = {
+        'action' : 'wbgetentities',
+        'ids' : ids,
+        'format' : 'json',
+        'props' : 'labels|descriptions',
+        'languages' : lang,
+        'callback' : 'JSON_CALLBACK'
+      };
+
       return $http.jsonp(WIKIDATA_API, { params : params });
     },
     
