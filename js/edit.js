@@ -4,6 +4,7 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 	$scope.joconde_id = '';
 	$scope.current_joconde_id = $scope.joconde_id;
 	$scope.wikidata_id = '';
+	$scope.already_wikidata = false;
 	$scope.data = [];
 	$scope.language = 'fr';
 	$scope.datePrecision = [
@@ -86,7 +87,7 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 	
 	$scope.onSelectLine = function (property, index, item, radio=false) {
 		item.display = item.label;
-
+		
 		$scope.data[property].data[index].value = item.id;
 		$scope.data[property].data[index].label = item.label;
 		$scope.data[property].data[index].description = item.description;
@@ -144,7 +145,7 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 		angular.forEach($scope.data, function(property) {
 			
 			angular.forEach(property.data, function(data) {
-				if (typeof data.value !== 'undefined' && data.value != '' && !(property.header && typeof data.language === 'undefined') && !(typeof data.database !=='undefined' && data.database == 1)) {
+				if ((typeof data.disabled === 'undefined' || !data.disabled) && typeof data.value !== 'undefined' && data.value != '' && !(property.header && typeof data.language === 'undefined') && !(typeof data.database !=='undefined' && data.database == 1)) {
 					if ($scope.wikidata_id)
 						$scope.quickStatements += $scope.wikidata_id;
 					else
@@ -221,8 +222,7 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 			});
 			
 			angular.forEach(property.subs, function(data) {
-				
-				if (typeof data.value !== 'undefined' && data.value != '' && (data.type != 'quantity' || !isNaN(data.value))) {
+				if (typeof data.data !== 'undefined' && typeof data.data[0] !== 'undefined' && typeof data.data[0].value !== 'undefined' && data.data[0].value != '' && (data.type != 'quantity' || !isNaN(data.data[0].value))) {
 
 					if ($scope.wikidata_id)
 						$scope.quickStatements += $scope.wikidata_id;
@@ -232,11 +232,11 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 					
 					switch (data.type) {
 						case 'quantity':
-							$scope.quickStatements += data.value;
+							$scope.quickStatements += data.data[0].value;
 							break;
 
 						case 'text':
-							$scope.quickStatements += "\"" + data.value + "\"";
+							$scope.quickStatements += "\"" + data.data[0].value + "\"";
 							break;
 					}
 					
@@ -285,33 +285,25 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 			angular.forEach(STRUCTURE, function(property) {
 				data = JSON.parse(JSON.stringify(property));
 				data.data = [];
+				angular.forEach(data.subs, function(sub) {
+					sub.data = [{
+						value:'',
+						disabled:false
+					}];
+				});
 			
 				if (typeof data.default !== 'undefined') {
 					angular.forEach(data.default, function(item) {
 						data.data.push(JSON.parse(JSON.stringify(item)));
 					});
 				}
-				
-				/*if (api_data) {
-					switch(data.property) {
-
-						case 'L':
-							if (api_data.title_fr) {
-								data.data.push({
-									language: 'fr',
-									value: api_data.title_fr
-								});
-							}
-							break;
-							
-					}
-				}*/
 
 				$scope.data.push(data);
 			});
 		
 			$http.get('includes/api.php?joconde_id='+$scope.joconde_id)
 				.success(function(api_data) {
+					
 					angular.forEach($scope.data, function(data) {
 
 						switch(data.property) {
@@ -395,7 +387,7 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 
 								case 'P2048':
 									if (api_data.height) {
-										sub.value = api_data.height;
+										sub.data[0].value = api_data.height;
 									}
 									break;
 
@@ -403,7 +395,31 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 						});
 						
 					});
-					$scope.updateQuickStatements();
+					
+					//-- check if joconde ID already used on Wikidata
+					$scope.wikidata_id = '';
+					
+					api.checkIdJocondeOnWikidata($scope.joconde_id).then(function(res){
+						
+						angular.forEach(res.results.bindings, function(item) {
+							$scope.wikidata_id = item.item.value.replace('http://www.wikidata.org/entity/', '');
+						});
+						
+						if ($scope.wikidata_id != '') {
+							
+							api.entity($scope.wikidata_id).then(function(res) {
+
+								$scope.mergeJocondeAndWikidata(res.data.entities[$scope.wikidata_id]);
+								$scope.updateQuickStatements();
+								
+							});
+							
+						}
+
+						$scope.updateQuickStatements();
+
+					});
+
 				})
 				.error(function(api_data) {
 					console.log('Error: ' + api_data);
@@ -413,6 +429,216 @@ app.controller('editController', function($scope, $q, $http, STRUCTURE, api) {
 		
 		}
 
+	}
+	
+	$scope.mergeJocondeAndWikidata = function(entity) {
+		
+		//console.log(entity);
+		//console.log($scope.data);
+				
+		//-- Labels				
+		current_labels = $scope.getDataProperty('L');
+		
+		angular.forEach(entity.labels, function(label) {
+			
+			//-- label in french
+			if (label.language == 'fr') {
+
+				//-- disable current french title
+				current_labels.data[0].disabled = true;
+
+				if (label.value != current_labels.data[0].value) {
+					//-- Wikidata label not the same as Joconde title
+
+					//-- Place Joconde title as an alias
+					current_aliases = $scope.getDataProperty('A');
+					current_aliases.data.push({
+						language: 'fr',
+						value: current_labels.data[0].value,
+					});
+					
+					//-- Update french label
+					current_labels.data[0].value = label.value;
+				}
+
+			} else
+				//-- add label
+				current_labels.data.push({
+					language: label.language,
+					value: label.value,
+					disabled:true,
+				});
+		});
+
+		//-- Descriptions
+		current_descriptions = $scope.getDataProperty('D');
+		
+		angular.forEach(entity.descriptions, function(description) {
+			//-- add description
+			current_descriptions.data.push({
+				language: description.language,
+				value: description.value,
+				disabled:true,
+			});
+		});
+		
+		//-- Claims
+		angular.forEach(entity.claims, function(claim, property_id) {
+
+			var current_claim;
+			
+			if (property_id != 'P136')
+				current_claim = $scope.getDataProperty(property_id);
+			else
+				current_claim = $scope.getDataProperty('P180');
+			if (property_id == 'P571')
+				console.log(current_claim, claim);
+			angular.forEach(claim, function(claim_wikidata) {
+			
+				var found = false;
+				angular.forEach(current_claim.data, function(claim_joconde) {
+					switch (current_claim.type) {
+						case 'entity':
+							if (claim_joconde.value == claim_wikidata.mainsnak.datavalue.value.id) {
+								claim_joconde.disabled = true;
+								found = true;
+							}
+							break;
+						case 'file':
+						case 'text':
+							if (claim_joconde.value == claim_wikidata.mainsnak.datavalue.value) {
+								claim_joconde.disabled = true;
+								found = true;
+							}
+							break;
+							
+						case 'quantity':
+							if (claim_joconde.value == parseFloat(claim_wikidata.mainsnak.datavalue.amout)) {
+								claim_joconde.disabled = true;
+								found = true;
+							}
+							break;
+							
+						case 'date':
+							if (claim_joconde.value == claim_wikidata.mainsnak.datavalue.time) {
+								claim_joconde.disabled = true;
+								found = true;
+							}
+							break;
+					}
+				});
+
+				if (!found) {
+					
+					var new_claim = '';
+					
+					switch (current_claim.type) {
+						case 'entity':
+							api.entity(claim_wikidata.mainsnak.datavalue.value.id).then(function(res) {
+
+								new_data = res.data.entities[claim_wikidata.mainsnak.datavalue.value.id];
+
+								if (typeof new_data.labels.fr !== 'undefined')
+									new_label = new_data.labels.fr.value;
+								else
+									new_label = '(aucun label)'
+
+								if (typeof new_data.descriptions.fr !== 'undefined')
+									new_description = new_data.descriptions.fr.value;
+								else
+									new_description = '(aucune description)'
+
+								new_claim = {
+									'description' : new_description,
+									'text' : new_label,
+									'value' : claim_wikidata.mainsnak.datavalue.value.id,
+									'disabled' : true,
+								};
+								if (current_claim.multiple)
+									current_claim.data.push(new_claim);
+								else
+								current_claim.data[0] = new_claim;
+
+							});
+
+							break;
+						case 'file':
+						case 'text':
+							
+							new_text = {
+								'value' : claim_wikidata.mainsnak.datavalue.value,
+								'disabled' : true,
+							};
+
+							if (typeof current_claim.multiple !== 'undefined' && current_claim.multiple && typeof current_claim.data !== 'undefined')
+								current_claim.data.push(new_text);
+							else {
+								if (typeof current_claim.data === 'undefined')
+									current_claim.data = [];
+								current_claim.data[0] = new_text;
+							}
+						
+							break;
+							
+						case 'quantity':
+						
+							new_quantity = {
+								'value' : parseFloat(claim_wikidata.mainsnak.datavalue.value.amount),
+								'disabled' : true,
+							};
+
+							if (typeof current_claim.multiple !== 'undefined' && current_claim.multiple && typeof current_claim.data !== 'undefined')
+								current_claim.data.push(new_quantity);
+							else {
+								if (typeof current_claim.data === 'undefined')
+									current_claim.data = [];
+								current_claim.data[0] = new_quantity;
+							}
+							
+							break;
+							
+						case 'date':
+						
+							new_date = {
+								'value' : claim_wikidata.mainsnak.datavalue.value.time,
+								'precision' : claim_wikidata.mainsnak.datavalue.value.precision,
+								'disabled' : true,
+							};
+
+							if (typeof current_claim.multiple !== 'undefined' && current_claim.multiple && typeof current_claim.data !== 'undefined')
+								current_claim.data.push(new_date);
+							else {
+								if (typeof current_claim.data === 'undefined')
+									current_claim.data = [];
+								current_claim.data[0] = new_date;
+							}
+							
+							break;
+					}
+
+				}
+
+			});
+
+		});
+
+	}
+	
+	$scope.getDataProperty = function(property_id) {
+		
+		var property = {};
+		
+		angular.forEach($scope.data, function(data) {
+			if (data.property == property_id)
+				property = data;
+				
+			angular.forEach(data.subs, function(sub) {
+				if (sub.property == property_id)
+					property = sub;
+			});
+		});
+
+		return property;
 	}
 	
 	$scope.submitQS = function() {

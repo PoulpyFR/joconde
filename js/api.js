@@ -1,6 +1,7 @@
 app.factory('api', function ($http) {
   var WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
   var COMMONS_API  = 'https://commons.wikimedia.org/w/api.php';
+  var SPARQL_API   = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql';
 
   return {
 
@@ -41,6 +42,23 @@ app.factory('api', function ($http) {
 
       return $http.jsonp(WIKIDATA_API, { params : params });
     },
+    
+    checkIdJocondeOnWikidata : function(id) {
+    	
+    	var query = 'SELECT ?item WHERE { ?item wdt:P347 "'+id+'" }';
+    	
+    	var params = {
+    		'format' : 'json',
+    		'query' : query,
+        'callback' : 'JSON_CALLBACK'
+    	}
+    	
+    	return $.getJSON(SPARQL_API, params, function( data ) {
+    		return data;
+    	});
+    },
+    
+    
     
     checkDatabase : function(type, input) {
     	var params = {

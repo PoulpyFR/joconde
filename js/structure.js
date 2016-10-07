@@ -67,6 +67,12 @@ app.value('STRUCTURE', [
 		multiple:	true,
 		visible:	true,
 	},{
+		title:		'Basé sur',
+		type:			'entity',
+		property:	'P144',
+		multiple:	true,
+		visible:	true,
+	},{
 		title:		'Sujet de l\'œuvre',
 		type:			'entity',
 		property:	'P921',
@@ -86,27 +92,33 @@ app.value('STRUCTURE', [
 			{
 				title:		'Hauteur',
 				type:			'quantity',
-				property:	'P2048'
+				property:	'P2048',
+				multiple:	false,
 			},{
 				title:		'Largeur',
 				type:			'quantity',
-				property:	'P2049'
+				property:	'P2049',
+				multiple:	false,
 			},{
 				title:		'Épaisseur',
 				type:			'quantity',
-				property:	'P2610'
+				property:	'P2610',
+				multiple:	false,
 			},{
 				title:		'Longueur',
 				type:			'quantity',
-				property:	'P2043'
+				property:	'P2043',
+				multiple:	false,
 			},{
 				title:		'Diamètre',
 				type:			'quantity',
-				property:	'P2386'
+				property:	'P2386',
+				multiple:	false,
 			},{
 				title:		'Surface',
 				type:			'quantity',
-				property:	'P2046'
+				property:	'P2046',
+				multiple:	false,
 			},
 		],
 	},{
@@ -117,19 +129,23 @@ app.value('STRUCTURE', [
 			{
 				title:		'Décrit à l\'url',
 				type:			'text',
-				property:	'P973'
+				property:	'P973',
+				multiple:	false,
 			},{
 				title:		'Atlas ID',
 				type:			'text',
-				property:	'P1212'
+				property:	'P1212',
+				multiple:	false,
 			},{
 				title:		'Category Commons',
 				type:			'text',
-				property:	'P373'
+				property:	'P373',
+				multiple:	false,
 			},{
 				title:		'Image',
-				type:			'text',
-				property:	'P18'
+				type:			'file',
+				property:	'P18',
+				multiple:	false,
 			},
 		]
 	}

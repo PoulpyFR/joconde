@@ -37,11 +37,11 @@
 				<input type="submit" value="Envoyer" />
 			</form>
 		</div>
-		<div id="wikidata_header" ng-if="wikidata_id">
+		<div id="wikidata_header">
 			<label for="wikidata_id"><a href="http://www.wikidata.org/wiki/{{wikidata_id}}" target="_blank">ID Wikidata</a> :</label>
-			<input type="text" ng-model="wikidata_id" name="wikidata_id" id="wikidata_id" disabled />
+			<input type="text" ng-model="wikidata_id" name="wikidata_id" id="wikidata_id" ng-disabled="already_wikidata" ng-change="updateData()" />
 		</div>
-		
+
 	</header>
 	
 	<div id="editSectionWrapper" ng-if="current_joconde_id">
@@ -65,7 +65,7 @@
 				<li ng-repeat="sub in property.subs">
 					<span class="separator">&nbsp;</span>
 					<span class="subtitle"><a href="http://www.wikidata.org/wiki/Property:{{sub.property}}" target="_blank">{{sub.title}}</a> :</span>
-					<input type="text" class="sub_input" ng-model="sub.value"  ng-change="updateData($parent.$index, $index)"/>
+					<input type="text" class="sub_input" ng-model="sub.data[0].value"  ng-change="updateData($parent.$index, $index)" ng-disabled="sub.data[0].disabled" />
 				</li>
 			</ul>
 
@@ -169,6 +169,7 @@
 											<span ng-switch-when="1" style="color:red">supprimer</span>
 											<span ng-switch-when="2" style="color:red">remplacer</span>
 											<span ng-switch-default></span>
+										</span>
 									</span>
 								</div>
 							</span>
